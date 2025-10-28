@@ -1,15 +1,16 @@
-name: Build Windows EXE
+name: Build and Release
 
 on:
   push:
-    branches: [ main, master ]
-  pull_request:
-    branches: [ main, master ]
-  workflow_dispatch:  # 允许手动触发
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
 
 jobs:
-  build-windows-exe:
-    runs-on: windows-latest  # 使用 Windows 运行器
+  build-release:
+    runs-on: windows-latest
     
     steps:
     - name: Checkout code
@@ -22,23 +23,17 @@ jobs:
     
     - name: Install dependencies
       run: |
-        python -m pip install --upgrade pip
         pip install pandas openpyxl pyinstaller
     
-    - name: Build EXE file
+    - name: Build EXE
       run: |
-        pyinstaller --onefile --console --name "Excel对比分析工具" excel_analyzer.py
-        dir dist\  # 列出生成的文件
+        pyinstaller --onefile --console --name "ExcelAnalyzer" excel_analyzer.py
     
-    - name: Upload EXE as artifact
-      uses: actions/upload-artifact@v4
+    - name: Create Release
+      uses: ncipollo/release-action@v1
       with:
-        name: Excel对比分析工具
-        path: dist/Excel对比分析工具.exe
-        retention-days: 30
-
-    - name: Create release (optional)
-      if: startsWith(github.ref, 'refs/tags/')
-      uses: softprops/action-gh-release@v1
-      with:
-        files: dist/Excel对比分析工具.exe
+        tag: "v${{ github.run_number }}"
+        name: "Excel分析工具 v${{ github.run_number }}"
+        body: "Excel对比字段分析工具 Windows 版本"
+        artifacts: "dist/ExcelAnalyzer.exe"
+        token: ${{ secrets.GITHUB_TOKEN }}
