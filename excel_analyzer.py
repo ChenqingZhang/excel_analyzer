@@ -87,7 +87,10 @@ def basic_analysis(df, comparison_cols):
             '通过率': f"{pass_rate:.2f}%"
         })
     
-    return results, total_fails, total_records, []
+    # 基础分析模式下返回空的 detailed_analysis
+    detailed_analysis = []
+    
+    return results, total_fails, total_records, detailed_analysis
 
 def detailed_analysis(df, comparison_cols):
     """详细分析 - 分析每条记录的具体原因"""
@@ -271,6 +274,12 @@ def main():
         # 询问用户是否需要详细分析
         need_detailed = ask_for_detailed_analysis()
         
+        # 初始化变量
+        results = []
+        total_fails = 0
+        total_records = 0
+        detailed_analysis = []  # 确保变量被初始化
+        
         # 根据用户选择执行不同的分析
         if need_detailed:
             print("\n🎯 已选择【详细分析】模式")
@@ -295,7 +304,7 @@ def main():
             print(f"   总记录数: {total_records}")
             print(f"   平均不通过率: {overall_fail_rate:.2f}%")
             print(f"   平均通过率: {overall_pass_rate:.2f}%")
-            if need_detailed:
+            if need_detailed and detailed_analysis:
                 print(f"   详细不通过记录: {len(detailed_analysis)} 条")
             print("=" * 60)
         
@@ -310,6 +319,9 @@ def main():
             if need_detailed and detailed_analysis:
                 detailed_df = pd.DataFrame(detailed_analysis)
                 detailed_df.to_excel(writer, sheet_name='详细原因', index=False)
+            elif need_detailed:
+                # 如果选择了详细分析但没有不通过记录，创建空表
+                pd.DataFrame({'说明': ['没有不通过记录']}).to_excel(writer, sheet_name='详细原因', index=False)
             
             # Sheet3: 原因统计（仅详细模式）
             if need_detailed and detailed_analysis:
@@ -333,6 +345,8 @@ def main():
                 if reason_stats:
                     reason_stats_df = pd.DataFrame(reason_stats)
                     reason_stats_df.to_excel(writer, sheet_name='原因统计', index=False)
+                else:
+                    pd.DataFrame({'说明': ['没有不通过记录']}).to_excel(writer, sheet_name='原因统计', index=False)
             
             # Sheet4: 通过率排名
             pass_rate_summary = summary_df[['比对字段', '通过数量', '不通过数量', '通过率', '不通过率']].copy()
@@ -360,8 +374,8 @@ def main():
             
             if need_detailed and detailed_analysis:
                 # 统计最主要的不通过原因
-                all_reasons = [item['不通过原因'] for item in detailed_analysis]
                 from collections import Counter
+                all_reasons = [item['不通过原因'] for item in detailed_analysis]
                 top_reasons = Counter(all_reasons).most_common(3)
                 print(f"\n🔍 主要不通过原因:")
                 for reason, count in top_reasons:
